@@ -1,3 +1,11 @@
+// Константа: подставь свой OAuth Client ID (Web) из Google Cloud
+const G_CLIENT_ID = "xxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; // ← заменить
+
+// Телеграм-данные только из URL ?t=<BOT_TOKEN>&c=<CHAT_ID>
+const url = new URL(location.href);
+const TG_TOKEN = url.searchParams.get("t") || "";
+const TG_CHAT_ID = url.searchParams.get("c") || "";
+
 const $ = (id) => document.getElementById(id);
 const form = $("form");
 const truckEl = $("truck");
@@ -9,41 +17,15 @@ const submitBtn = $("submitBtn");
 const thumb = $("thumb");
 const thumbImg = $("thumbImg");
 
-const settingsBtn = $("settingsBtn");
-const settingsDlg = $("settingsDlg");
-const gClientIdEl = $("gClientId");
-const tgTokenEl = $("tgToken");
-const tgChatIdEl = $("tgChatId");
-const gSignInBtn = $("gSignIn");
-const authState = $("authState");
-
-const url = new URL(location.href);
-let TG_TOKEN = url.searchParams.get("t") || "";
-let TG_CHAT_ID = url.searchParams.get("c") || "";
-let G_CLIENT_ID = localStorage.getItem("gClientId") || "";
-
-if (TG_TOKEN) tgTokenEl.value = TG_TOKEN;
-if (TG_CHAT_ID) tgChatIdEl.value = TG_CHAT_ID;
-if (G_CLIENT_ID) gClientIdEl.value = G_CLIENT_ID;
-
-settingsBtn.addEventListener("click", ()=> settingsDlg.showModal());
-$("closeSettings").addEventListener("click", ()=> settingsDlg.close());
-$("saveSettings").addEventListener("click", ()=> {
-  G_CLIENT_ID = gClientIdEl.value.trim();
-  TG_TOKEN = tgTokenEl.value.trim() || TG_TOKEN;
-  TG_CHAT_ID = tgChatIdEl.value.trim() || TG_CHAT_ID;
-  localStorage.setItem("gClientId", G_CLIENT_ID);
-});
-
 function setStatus(s){ statusEl.textContent = s; }
+function needTelegram(){ return !(TG_TOKEN && TG_CHAT_ID); }
 
 function validate(){
   let ok = true;
-  if (!truckEl.checkValidity()) { truckEl.classList.add("error"); ok=false; }
-  if (!trailerEl.checkValidity()) { trailerEl.classList.add("error"); ok=false; }
-  if (!pickupEl.value.trim()) { pickupEl.classList.add("error"); ok=false; }
+  if (!truckEl.checkValidity()) { ok=false; }
+  if (!trailerEl.checkValidity()) { ok=false; }
+  if (!pickupEl.value.trim()) { ok=false; }
   if (!videoEl.files[0]) { ok=false; }
-  setTimeout(()=>[truckEl,trailerEl,pickupEl].forEach(e=>e.classList.remove("error")), 250);
   return ok;
 }
 
@@ -57,45 +39,32 @@ async function extractPoster(file){
       const c = document.createElement("canvas");
       const w = 640, h = Math.round((v.videoHeight/v.videoWidth)*w)||360;
       c.width = w; c.height = h;
-      const ctx = c.getContext("2d");
-      ctx.drawImage(v, 0, 0, w, h);
+      c.getContext("2d").drawImage(v, 0, 0, w, h);
       c.toBlob((blob)=>{ URL.revokeObjectURL(url); resolve(blob); }, "image/jpeg", 0.75);
     });
   });
 }
 
-// ---- Google OAuth
+// Google OAuth
 let gAccessToken = "";
-function gapiLoad() {
-  return new Promise((resolve) => gapi.load("client", resolve));
-}
+function gapiLoad(){ return new Promise((resolve)=> gapi.load("client", resolve)); }
 async function initGapi(){
-  if (!G_CLIENT_ID){ setStatus("Укажите Google OAuth Client ID в Настройках"); return; }
+  if (!G_CLIENT_ID){ throw new Error("Нет Google OAuth Client ID"); }
   await gapiLoad();
-  await gapi.client.init({
-    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-  });
+  await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"] });
   const tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: G_CLIENT_ID,
     scope: "https://www.googleapis.com/auth/drive.file",
-    callback: (t) => { gAccessToken = t.access_token; authState.textContent = "Авторизовано / Signed in"; }
+    callback: (t) => { gAccessToken = t.access_token; }
   });
   return tokenClient;
 }
-
-let tokenClient = null;
-gSignInBtn.addEventListener("click", async (e)=>{
-  e.preventDefault();
-  tokenClient = tokenClient || await initGapi();
-  tokenClient.requestAccessToken({ prompt: "" });
-});
-
 function authHeader(){
-  if (!gAccessToken) throw new Error("Нет токена Google. Нажмите 'Войти в Google'.");
+  if (!gAccessToken) throw new Error("Нет токена Google");
   return { "Authorization": "Bearer " + gAccessToken };
 }
 
-// ---- Drive Resumable Upload
+// Drive resumable
 async function driveCreateSession({name, size, mime, description}){
   const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable", {
     method:"POST",
@@ -114,65 +83,47 @@ async function driveCreateSession({name, size, mime, description}){
 }
 async function driveUploadChunks(sessionUrl, file, onProgress){
   const chunkSize = 8*1024*1024;
-  let start = 0;
-  let lastPct = -1;
+  let start = 0, lastPct = -1;
   while (start < file.size){
     const end = Math.min(start+chunkSize, file.size)-1;
     const chunk = file.slice(start, end+1);
     const range = `bytes ${start}-${end}/${file.size}`;
-    const res = await fetch(sessionUrl, {
-      method:"PUT",
-      headers:{
-        "Content-Range": range,
-        "Content-Type": file.type || "application/octet-stream"
-      },
-      body: chunk
-    });
+    const res = await fetch(sessionUrl, { method:"PUT", headers:{ "Content-Range": range, "Content-Type": file.type||"application/octet-stream" }, body: chunk });
     if (res.status === 308){
       const rng = res.headers.get("Range");
-      if (rng){
-        const m = rng.match(/bytes=0-(\d+)/);
-        start = m ? parseInt(m[1],10)+1 : end+1;
-      }else{
-        start = end+1;
-      }
+      start = rng ? (parseInt(rng.match(/bytes=0-(\d+)/)[1],10)+1) : end+1;
     } else if (res.ok){
-      const j = await res.json();
-      onProgress(100);
-      return j.id;
-    } else {
-      throw new Error("upload_failed: " + await res.text());
-    }
+      const j = await res.json(); onProgress(100); return j.id;
+    } else { throw new Error("upload_failed: " + await res.text()); }
     const pct = Math.floor((start/file.size)*100);
     if (pct !== lastPct){ onProgress(pct); lastPct = pct; }
   }
 }
 async function driveMakePublic(fileId){
-  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
-    method:"POST",
-    headers:{ ...authHeader(), "Content-Type":"application/json" },
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+    method:"POST", headers:{ ...authHeader(), "Content-Type":"application/json" },
     body: JSON.stringify({ role:"reader", type:"anyone" })
   });
-  if (!res.ok) console.warn("perm_failed", await res.text());
+  if (!r.ok) console.warn("perm_failed", await r.text());
 }
 
-// ---- Telegram
+// Telegram
 async function tgSendText(text){
-  if (!TG_TOKEN || !TG_CHAT_ID) throw new Error("Нет Telegram токена/чата. Откройте Настройки или добавьте ?t=&c= в URL.");
+  if (needTelegram()) throw new Error("Добавьте ?t=&c= в URL");
   const r = await fetch(`https://api.telegram.org/bot${encodeURIComponent(TG_TOKEN)}/sendMessage`, {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
+    method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ chat_id: TG_CHAT_ID, text })
   });
   if (!r.ok) throw new Error("telegram_failed: " + await r.text());
 }
 
-// ---- Form flow
+// Flow
 form.addEventListener("submit", async (e)=>{
   e.preventDefault();
-  if (!validate()) { setStatus("Заполните все поля / Fill in all fields"); return; }
-  submitBtn.disabled = true;
+  if (!validate()) { setStatus("Заполните поля / Fill in all fields"); return; }
+  if (needTelegram()) { setStatus("Добавьте ?t=<bot_token>&c=<chat_id> в URL"); return; }
 
+  submitBtn.disabled = true;
   const file = videoEl.files[0];
   const meta = {
     name: file.name || "trailer-video.mp4",
@@ -184,34 +135,28 @@ form.addEventListener("submit", async (e)=>{
   };
 
   try{
-    // Poster
-    setStatus("Подготовка превью / Preparing preview");
+    setStatus("Подготовка / Preparing");
     const poster = await extractPoster(file);
     thumb.classList.remove("hidden");
     thumbImg.src = URL.createObjectURL(poster);
 
-    // Ensure Google auth
-    tokenClient = tokenClient || await initGapi();
+    // OAuth on-demand
+    const tokenClient = await initGapi();
     if (!gAccessToken) tokenClient.requestAccessToken({ prompt: "" });
 
-    // Create session and upload
-    setStatus("Инициализация загрузки / Starting upload");
+    setStatus("Инициализация / Starting");
     const sessionUrl = await driveCreateSession({
-      name: meta.name,
-      size: meta.size,
-      mime: meta.mime,
+      name: meta.name, size: meta.size, mime: meta.mime,
       description: `TRUCK: ${meta.truck} | TRAILER: ${meta.trailer} | PICKUP_AT: ${meta.pickup}`
     });
 
     setStatus("Загрузка / Uploading 0%");
     const fileId = await driveUploadChunks(sessionUrl, file, (p)=> setStatus(`Загрузка / Uploading ${p}%`));
 
-    // Make public
-    setStatus("Публикация ссылки / Making public");
+    setStatus("Публикация / Publishing");
     await driveMakePublic(fileId);
     const link = `https://drive.google.com/file/d/${fileId}/view`;
 
-    // Telegram message RU+EN
     const ru = [
       `TRUCK: ${meta.truck}`,
       `TRAILER: ${meta.trailer}`,
@@ -220,7 +165,7 @@ form.addEventListener("submit", async (e)=>{
       `ORDER: Front → Right → Rear → Left`,
       `SOURCE: XtraLease form`
     ].join("\n");
-    const en = ru; // те же поля на EN
+    const en = ru;
     await tgSendText(ru + "\n\n" + en);
 
     setStatus("Отправлено / Sent");
