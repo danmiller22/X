@@ -6,16 +6,15 @@ const url = new URL(location.href);
 const TG_TOKEN = url.searchParams.get("t") || "";
 const TG_CHAT_ID = url.searchParams.get("c") || "";
 
-// ---- i18n
+// i18n — один язык на экране
 let currentLang = "ru";
 const t = {
   ru: {
     title: "Видео осмотр трейлера",
-    subtitle: "Trailer video inspection",
-    truck: "Трак № / Truck #",
-    trailer: "Трейлер № / Trailer #",
-    pickup: "Когда забирал / Pickup time",
-    video: "Видео / One video",
+    truck: "Трак №",
+    trailer: "Трейлер №",
+    pickup: "Когда забирал",
+    video: "Видео",
     hint: "все стороны трейлера внутри и снаружи • каждое колесо • потолок изнутри • углы и двери",
     statusReady: "Готово к отправке",
     btnSubmit: "Отправить",
@@ -28,7 +27,6 @@ const t = {
   },
   en: {
     title: "Trailer video inspection",
-    subtitle: "Trailer video inspection",
     truck: "Truck #",
     trailer: "Trailer #",
     pickup: "Pickup time",
@@ -47,19 +45,15 @@ const t = {
 function applyLang(lang){
   currentLang = lang;
   const L = t[lang];
-  document.getElementById("title").firstChild.nodeValue = L.title + "\n";
-  document.getElementById("subtitle").textContent = L.subtitle;
+  document.title = L.title;
+  document.getElementById("title").textContent = L.title;
   document.getElementById("labelTruck").textContent = L.truck;
   document.getElementById("labelTrailer").textContent = L.trailer;
   document.getElementById("labelPickup").textContent = L.pickup;
   document.getElementById("labelVideo").textContent = L.video;
-  document.getElementById("hint").innerHTML =
-    (lang==="ru" ? t.ru.hint : t.en.hint) + "<br>" +
-    (lang==="ru" ? t.en.hint : t.ru.hint);
-  document.getElementById("status").textContent =
-    L.statusReady + " / " + (lang==="ru" ? t.en.statusReady : t.ru.statusReady);
-  const btn = document.getElementById("submitBtn");
-  btn.textContent = L.btnSubmit + " / " + (lang==="ru" ? t.en.btnSubmit : t.ru.btnSubmit);
+  document.getElementById("hint").textContent = L.hint;
+  document.getElementById("status").textContent = L.statusReady;
+  document.getElementById("submitBtn").textContent = L.btnSubmit;
 }
 document.getElementById("langRU").onclick = ()=> applyLang("ru");
 document.getElementById("langEN").onclick = ()=> applyLang("en");
@@ -81,11 +75,10 @@ function setStatus(s){ statusEl.textContent = s; }
 function needTelegram(){ return !(TG_TOKEN && TG_CHAT_ID); }
 
 function validate(){
-  const ok = truckEl.checkValidity()
+  return truckEl.checkValidity()
     && trailerEl.checkValidity()
     && !!pickupEl.value.trim()
     && !!videoEl.files[0];
-  return ok;
 }
 
 async function extractPoster(file){
@@ -168,7 +161,7 @@ async function driveMakePublic(fileId){
 
 // Telegram
 async function tgSendText(text){
-  if (needTelegram()) throw new Error(currentLang==="ru" ? t.ru.urlNeed : t.en.urlNeed);
+  if (needTelegram()) throw new Error(t[currentLang].urlNeed);
   const r = await fetch(`https://api.telegram.org/bot${encodeURIComponent(TG_TOKEN)}/sendMessage`, {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ chat_id: TG_CHAT_ID, text })
@@ -180,11 +173,11 @@ async function tgSendText(text){
 form.addEventListener("submit", async (e)=>{
   e.preventDefault();
   if (!validate()) { setStatus(currentLang==="ru" ? "Заполните все поля" : "Fill in all fields"); return; }
-  if (needTelegram()) { setStatus(currentLang==="ru" ? t.ru.urlNeed : t.en.urlNeed); return; }
+  if (needTelegram()) { setStatus(t[currentLang].urlNeed); return; }
 
   submitBtn.disabled = true;
 
-  const file = videoEl.files[0];
+  const file = document.getElementById("video").files[0];
   const meta = {
     name: file.name || "trailer-video.mp4",
     size: file.size,
@@ -224,17 +217,31 @@ form.addEventListener("submit", async (e)=>{
       `ORDER: Front → Right → Rear → Left`,
       `SOURCE: XtraLease form`
     ].join("\n");
-    const en = ru;
-    await tgSendText(ru + "\n\n" + en);
+    await tgSendText(ru); // текст универсальный. при желании дублируйте EN.
 
-    // success state: button turns green and text changes
+    // успех: зелёная кнопка и текст "Отправлено"/"Sent"
     submitBtn.classList.remove("primary");
     submitBtn.classList.add("success");
-    submitBtn.textContent = (currentLang==="ru" ? t.ru.statusSent : t.en.statusSent) + " / " + (currentLang==="ru" ? t.en.statusSent : t.ru.statusSent);
-    setStatus((currentLang==="ru" ? t.ru.statusSent : t.en.statusSent));
+    submitBtn.textContent = t[currentLang].statusSent;
+    setStatus(t[currentLang].statusSent);
   }catch(err){
     console.error(err);
     setStatus("Ошибка / Error: " + err.message);
     submitBtn.disabled = false;
   }
 });
+
+// язык переключатель
+document.getElementById("langRU").onclick = ()=> applyLang("ru");
+document.getElementById("langEN").onclick = ()=> applyLang("en");
+function applyLang(lang){ currentLang = lang; const L = t[lang];
+  document.title = L.title;
+  document.getElementById("title").textContent = L.title;
+  document.getElementById("labelTruck").textContent = L.truck;
+  document.getElementById("labelTrailer").textContent = L.trailer;
+  document.getElementById("labelPickup").textContent = L.pickup;
+  document.getElementById("labelVideo").textContent = L.video;
+  document.getElementById("hint").textContent = L.hint;
+  document.getElementById("status").textContent = L.statusReady;
+  document.getElementById("submitBtn").textContent = L.btnSubmit;
+}
