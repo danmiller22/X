@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Видео осмотр трейлера / Trailer video inspection</title>
+  <title>Видео осмотр трейлера</title>
   <link rel="preload" href="public/style.css" as="style">
   <link rel="stylesheet" href="public/style.css">
   <style>
@@ -29,7 +29,7 @@
   <main class="container">
     <header class="hdr">
       <img src="assets/logo.svg" alt="XtraLease" style="width:96px;opacity:.85">
-      <h1 id="title">Видео осмотр трейлера<br><span id="subtitle">Trailer video inspection</span></h1>
+      <h1 id="title">Видео осмотр трейлера</h1>
     </header>
 
     <section class="card">
@@ -40,37 +40,34 @@
 
       <form id="form" class="form" novalidate>
         <label class="field">
-          <span id="labelTruck">Трак № / Truck #</span>
+          <span id="labelTruck">Трак №</span>
           <input id="truck" type="text" placeholder="ABC-123" required pattern="[A-Za-z0-9\-]{3,15}">
         </label>
 
         <label class="field">
-          <span id="labelTrailer">Трейлер № / Trailer #</span>
+          <span id="labelTrailer">Трейлер №</span>
           <input id="trailer" type="text" placeholder="XTRA-123456" required pattern="[A-Za-z0-9\-]{3,15}">
         </label>
 
         <label class="field">
-          <span id="labelPickup">Когда забирал / Pickup time</span>
+          <span id="labelPickup">Когда забирал</span>
           <input id="pickup" type="text" placeholder="2025-10-29 14:35 America/Chicago" required>
         </label>
 
         <label class="field">
-          <span id="labelVideo">Видео / One video</span>
+          <span id="labelVideo">Видео</span>
           <input id="video" type="file" accept="video/*" capture required>
-          <small id="hint">
-            все стороны трейлера внутри и снаружи • каждое колесо • потолок изнутри • углы и двери<br>
-            all trailer sides inside and outside • every wheel • interior roof • corners and doors
-          </small>
+          <small id="hint">все стороны трейлера внутри и снаружи • каждое колесо • потолок изнутри • углы и двери</small>
         </label>
 
         <div id="thumb" class="thumb hidden">
           <img id="thumbImg" alt="preview" style="display:block;width:100%">
         </div>
 
-        <div id="status" class="status">Готово к отправке / Ready to submit</div>
+        <div id="status" class="status">Готово к отправке</div>
 
         <div class="sticky">
-          <button id="submitBtn" class="btn primary" type="submit">Отправить / Submit</button>
+          <button id="submitBtn" class="btn primary" type="submit">Отправить</button>
         </div>
       </form>
     </section>
