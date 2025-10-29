@@ -16,6 +16,7 @@
     input[type="text"],input[type="file"]{width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff}
     .btn{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:16px;border-radius:16px;border:0;font-weight:600;cursor:pointer}
     .btn.primary{background:linear-gradient(180deg,#FF2D20,#D21C0F);color:#fff}
+    .btn.success{background:linear-gradient(180deg,#10B981,#059669);color:#fff}
     .lang{display:flex;gap:8px;justify-content:flex-end;margin-bottom:8px}
     .lang button{padding:8px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;cursor:pointer}
     .thumb{border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06)}
@@ -23,7 +24,6 @@
     .status{margin:6px 0 10px;opacity:.85}
     @media (max-width:480px){.container{padding:12px}.hdr h1{font-size:22px}.sticky{position:sticky;bottom:12px}}
   </style>
-  <script src="https://apis.google.com/js/api.js" defer></script>
 </head>
 <body>
   <main class="container">
@@ -57,7 +57,7 @@
         <label class="field">
           <span id="labelVideo">Видео</span>
           <input id="video" type="file" accept="video/*" capture required>
-          <small id="hint">все стороны трейлера внутри и снаружи • каждое колесо • потолок изнутри • углы и двери</small>
+          <small id="hint">360° обход снаружи и внутри • каждое колесо и ступица • потолок изнутри • все углы • двери (распашные/рольставни), петли, уплотнители, замки</small>
         </label>
 
         <div id="thumb" class="thumb hidden">

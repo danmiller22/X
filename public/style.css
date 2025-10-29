@@ -39,8 +39,6 @@ input[type="text"]:focus, input[type="file"]:focus{
   background: linear-gradient(180deg, var(--accent), var(--accent2));
   color:white; box-shadow: 0 8px 30px rgba(255,45,32,0.3);
 }
-.btn.primary:hover{transform: translateY(-1px); box-shadow: 0 12px 40px rgba(255,45,32,0.38)}
-.btn.primary:active{transform: scale(.98)}
 .btn.success{
   background: linear-gradient(180deg, var(--green1), var(--green2));
   color:white; box-shadow: 0 8px 30px rgba(16,185,129,0.35);
