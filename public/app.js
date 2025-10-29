@@ -1,14 +1,15 @@
-// Google OAuth Client ID (Web) — замените на свой
+// ==== CONFIG ====
+// Подставь свой OAuth Client ID (Web) из Google Cloud
 const G_CLIENT_ID = "xxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com";
 
-// Telegram токен и чат берутся из URL: ?t=<BOT_TOKEN>&c=<CHAT_ID>
+// Телеграм из URL: ?t=<BOT_TOKEN>&c=<CHAT_ID>
 const url = new URL(location.href);
 const TG_TOKEN = url.searchParams.get("t") || "";
 const TG_CHAT_ID = url.searchParams.get("c") || "";
 
-// i18n — один язык на экране
-let currentLang = "ru";
-const t = {
+// ==== I18N ====
+let currentLang = (url.searchParams.get("l") || "ru").toLowerCase(); // ?l=en для старта на EN
+const dict = {
   ru: {
     title: "Видео осмотр трейлера",
     truck: "Трак №",
@@ -24,6 +25,7 @@ const t = {
     statusPublish: "Публикация",
     statusSent: "Отправлено",
     urlNeed: "Добавьте ?t=<bot_token>&c=<chat_id> в URL",
+    fillAll: "Заполните все поля",
   },
   en: {
     title: "Trailer video inspection",
@@ -40,27 +42,38 @@ const t = {
     statusPublish: "Publishing",
     statusSent: "Sent",
     urlNeed: "Append ?t=<bot_token>&c=<chat_id> to URL",
+    fillAll: "Fill in all fields",
   }
 };
-function applyLang(lang){
-  currentLang = lang;
-  const L = t[lang];
-  document.title = L.title;
-  document.getElementById("title").textContent = L.title;
-  document.getElementById("labelTruck").textContent = L.truck;
-  document.getElementById("labelTrailer").textContent = L.trailer;
-  document.getElementById("labelPickup").textContent = L.pickup;
-  document.getElementById("labelVideo").textContent = L.video;
-  document.getElementById("hint").textContent = L.hint;
-  document.getElementById("status").textContent = L.statusReady;
-  document.getElementById("submitBtn").textContent = L.btnSubmit;
-}
-document.getElementById("langRU").onclick = ()=> applyLang("ru");
-document.getElementById("langEN").onclick = ()=> applyLang("en");
-applyLang("ru");
 
-// ---- helpers
-const $ = (id) => document.getElementById(id);
+function $(id){ return document.getElementById(id); }
+
+function applyLang(lang){
+  currentLang = (lang === "en") ? "en" : "ru";
+  const L = dict[currentLang];
+
+  document.documentElement.setAttribute("lang", currentLang);
+  document.title = L.title;
+  $("title").textContent = L.title;
+  $("labelTruck").textContent = L.truck;
+  $("labelTrailer").textContent = L.trailer;
+  $("labelPickup").textContent = L.pickup;
+  $("labelVideo").textContent = L.video;
+  $("hint").textContent = L.hint;
+  $("status").textContent = L.statusReady;
+  $("submitBtn").textContent = L.btnSubmit;
+
+  // визуально активная кнопка языка
+  $("langRU").classList.toggle("active", currentLang === "ru");
+  $("langEN").classList.toggle("active", currentLang === "en");
+}
+
+// инициализация языков
+$("langRU").onclick = () => applyLang("ru");
+$("langEN").onclick = () => applyLang("en");
+applyLang(currentLang);
+
+// ==== FORM / FLOW ====
 const form = $("form");
 const truckEl = $("truck");
 const trailerEl = $("trailer");
@@ -83,85 +96,77 @@ function validate(){
 
 async function extractPoster(file){
   return new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
+    const u = URL.createObjectURL(file);
     const v = document.createElement("video");
-    v.src = url; v.muted = true; v.playsInline = true;
+    v.src = u; v.muted = true; v.playsInline = true;
     v.addEventListener("loadeddata", ()=>{ v.currentTime = Math.min(1, (v.duration||1)*0.1); });
     v.addEventListener("seeked", ()=>{
       const c = document.createElement("canvas");
       const w = 640, h = Math.round((v.videoHeight/v.videoWidth)*w)||360;
       c.width = w; c.height = h;
       c.getContext("2d").drawImage(v, 0, 0, w, h);
-      c.toBlob((blob)=>{ URL.revokeObjectURL(url); resolve(blob); }, "image/jpeg", 0.75);
+      c.toBlob((blob)=>{ URL.revokeObjectURL(u); resolve(blob); }, "image/jpeg", 0.75);
     });
   });
 }
 
-// Google OAuth
+// ==== Google OAuth + Drive resumable ====
 let gAccessToken = "";
-function gapiLoad(){ return new Promise((resolve)=> gapi.load("client", resolve)); }
+function gapiLoad(){ return new Promise((res)=> gapi.load("client", res)); }
 async function initGapi(){
   if (!G_CLIENT_ID) throw new Error("No Google OAuth Client ID");
   await gapiLoad();
   await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"] });
-  const tokenClient = google.accounts.oauth2.initTokenClient({
+  return google.accounts.oauth2.initTokenClient({
     client_id: G_CLIENT_ID,
     scope: "https://www.googleapis.com/auth/drive.file",
     callback: (t) => { gAccessToken = t.access_token; }
   });
-  return tokenClient;
 }
 function authHeader(){
   if (!gAccessToken) throw new Error("No Google token");
   return { "Authorization": "Bearer " + gAccessToken };
 }
-
-// Drive resumable
 async function driveCreateSession({name, size, mime, description}){
-  const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable", {
+  const r = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable", {
     method:"POST",
-    headers:{
-      ...authHeader(),
-      "Content-Type":"application/json; charset=UTF-8",
-      "X-Upload-Content-Type": mime,
-      "X-Upload-Content-Length": String(size),
-    },
+    headers:{ ...authHeader(), "Content-Type":"application/json; charset=UTF-8",
+      "X-Upload-Content-Type": mime, "X-Upload-Content-Length": String(size) },
     body: JSON.stringify({ name, description })
   });
-  if (!res.ok) throw new Error("init_failed: " + await res.text());
-  const loc = res.headers.get("Location");
-  if (!loc) throw new Error("no_session_location");
+  if (!r.ok) throw new Error("init_failed: " + await r.text());
+  const loc = r.headers.get("Location"); if (!loc) throw new Error("no_session_location");
   return loc;
 }
 async function driveUploadChunks(sessionUrl, file, onProgress){
-  const chunkSize = 8*1024*1024;
-  let start = 0, lastPct = -1;
+  const chunkSize = 8*1024*1024; let start = 0, last = -1;
   while (start < file.size){
     const end = Math.min(start+chunkSize, file.size)-1;
     const chunk = file.slice(start, end+1);
-    const range = `bytes ${start}-${end}/${file.size}`;
-    const res = await fetch(sessionUrl, { method:"PUT", headers:{ "Content-Range": range, "Content-Type": file.type||"application/octet-stream" }, body: chunk });
+    const res = await fetch(sessionUrl, {
+      method:"PUT",
+      headers:{ "Content-Range": `bytes ${start}-${end}/${file.size}`, "Content-Type": file.type||"application/octet-stream" },
+      body: chunk
+    });
     if (res.status === 308){
-      const rng = res.headers.get("Range");
-      start = rng ? (parseInt(rng.match(/bytes=0-(\d+)/)[1],10)+1) : end+1;
+      const m = (res.headers.get("Range")||"").match(/bytes=0-(\d+)/);
+      start = m ? parseInt(m[1],10)+1 : end+1;
     } else if (res.ok){
       const j = await res.json(); onProgress(100); return j.id;
     } else { throw new Error("upload_failed: " + await res.text()); }
-    const pct = Math.floor((start/file.size)*100);
-    if (pct !== lastPct){ onProgress(pct); lastPct = pct; }
+    const pct = Math.floor((start/file.size)*100); if (pct !== last){ onProgress(pct); last = pct; }
   }
 }
-async function driveMakePublic(fileId){
-  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+async function driveMakePublic(id){
+  await fetch(`https://www.googleapis.com/drive/v3/files/${id}/permissions`, {
     method:"POST", headers:{ ...authHeader(), "Content-Type":"application/json" },
     body: JSON.stringify({ role:"reader", type:"anyone" })
   });
-  if (!r.ok) console.warn("perm_failed", await r.text());
 }
 
-// Telegram
+// ==== Telegram ====
 async function tgSendText(text){
-  if (needTelegram()) throw new Error(t[currentLang].urlNeed);
+  if (needTelegram()) throw new Error(dict[currentLang].urlNeed);
   const r = await fetch(`https://api.telegram.org/bot${encodeURIComponent(TG_TOKEN)}/sendMessage`, {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ chat_id: TG_CHAT_ID, text })
@@ -169,26 +174,25 @@ async function tgSendText(text){
   if (!r.ok) throw new Error("telegram_failed: " + await r.text());
 }
 
-// Flow
+// ==== Submit flow ====
 form.addEventListener("submit", async (e)=>{
   e.preventDefault();
-  if (!validate()) { setStatus(currentLang==="ru" ? "Заполните все поля" : "Fill in all fields"); return; }
-  if (needTelegram()) { setStatus(t[currentLang].urlNeed); return; }
+  if (!validate()){ setStatus(dict[currentLang].fillAll); return; }
+  if (needTelegram()){ setStatus(dict[currentLang].urlNeed); return; }
 
   submitBtn.disabled = true;
-
-  const file = document.getElementById("video").files[0];
+  const file = $("video").files[0];
   const meta = {
     name: file.name || "trailer-video.mp4",
     size: file.size,
     mime: file.type || "video/mp4",
-    truck: document.getElementById("truck").value.trim(),
-    trailer: document.getElementById("trailer").value.trim(),
-    pickup: document.getElementById("pickup").value.trim(),
+    truck: $("truck").value.trim(),
+    trailer: $("trailer").value.trim(),
+    pickup: $("pickup").value.trim(),
   };
 
   try{
-    setStatus(t[currentLang].statusPrep);
+    setStatus(dict[currentLang].statusPrep);
     const poster = await extractPoster(file);
     thumb.classList.remove("hidden");
     thumbImg.src = URL.createObjectURL(poster);
@@ -196,20 +200,20 @@ form.addEventListener("submit", async (e)=>{
     const tokenClient = await initGapi();
     if (!gAccessToken) tokenClient.requestAccessToken({ prompt: "" });
 
-    setStatus(t[currentLang].statusStart);
+    setStatus(dict[currentLang].statusStart);
     const sessionUrl = await driveCreateSession({
       name: meta.name, size: meta.size, mime: meta.mime,
       description: `TRUCK: ${meta.truck} | TRAILER: ${meta.trailer} | PICKUP_AT: ${meta.pickup}`
     });
 
-    setStatus(t[currentLang].statusUpload(0));
-    const fileId = await driveUploadChunks(sessionUrl, file, (p)=> setStatus(t[currentLang].statusUpload(p)));
+    setStatus(dict[currentLang].statusUpload(0));
+    const fileId = await driveUploadChunks(sessionUrl, file, (p)=> setStatus(dict[currentLang].statusUpload(p)));
 
-    setStatus(t[currentLang].statusPublish);
+    setStatus(dict[currentLang].statusPublish);
     await driveMakePublic(fileId);
     const link = `https://drive.google.com/file/d/${fileId}/view`;
 
-    const ru = [
+    const msg = [
       `TRUCK: ${meta.truck}`,
       `TRAILER: ${meta.trailer}`,
       `PICKUP_AT: ${meta.pickup}`,
@@ -217,31 +221,16 @@ form.addEventListener("submit", async (e)=>{
       `ORDER: Front → Right → Rear → Left`,
       `SOURCE: XtraLease form`
     ].join("\n");
-    await tgSendText(ru); // текст универсальный. при желании дублируйте EN.
+    await tgSendText(msg);
 
-    // успех: зелёная кнопка и текст "Отправлено"/"Sent"
+    // success state
     submitBtn.classList.remove("primary");
     submitBtn.classList.add("success");
-    submitBtn.textContent = t[currentLang].statusSent;
-    setStatus(t[currentLang].statusSent);
+    submitBtn.textContent = dict[currentLang].statusSent;
+    setStatus(dict[currentLang].statusSent);
   }catch(err){
     console.error(err);
     setStatus("Ошибка / Error: " + err.message);
     submitBtn.disabled = false;
   }
 });
-
-// язык переключатель
-document.getElementById("langRU").onclick = ()=> applyLang("ru");
-document.getElementById("langEN").onclick = ()=> applyLang("en");
-function applyLang(lang){ currentLang = lang; const L = t[lang];
-  document.title = L.title;
-  document.getElementById("title").textContent = L.title;
-  document.getElementById("labelTruck").textContent = L.truck;
-  document.getElementById("labelTrailer").textContent = L.trailer;
-  document.getElementById("labelPickup").textContent = L.pickup;
-  document.getElementById("labelVideo").textContent = L.video;
-  document.getElementById("hint").textContent = L.hint;
-  document.getElementById("status").textContent = L.statusReady;
-  document.getElementById("submitBtn").textContent = L.btnSubmit;
-}
