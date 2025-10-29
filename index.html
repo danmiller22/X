@@ -7,7 +7,7 @@
   <link rel="preload" href="public/style.css" as="style">
   <link rel="stylesheet" href="public/style.css">
   <style>
-    /* Критические стили, чтобы страница выглядела нормально даже без внешнего CSS */
+    /* Критические стили для гарантированного вида */
     body{margin:0;background:#0B0B0C;color:#fff;font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial}
     .container{max-width:560px;margin:0 auto;padding:16px}
     .hdr h1{margin:12px 0 20px;font-size:24px;line-height:1.25}
@@ -22,45 +22,18 @@
     .status{margin:6px 0 10px;opacity:.8}
     .thumb{border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06)}
     .thumb.hidden{display:none}
-    .settings{display:flex;justify-content:flex-end;margin-bottom:8px}
-    dialog{border:none;border-radius:16px;padding:16px;width:min(520px,90vw)}
-    dialog::backdrop{background:rgba(0,0,0,.5)}
     @media (max-width:480px){.container{padding:12px}.hdr h1{font-size:22px}.sticky{position:sticky;bottom:12px}}
   </style>
   <script src="https://apis.google.com/js/api.js" defer></script>
 </head>
 <body>
-  <div class="bg"></div>
   <main class="container">
     <header class="hdr">
-      <img src="assets/logo.svg" class="logo" alt="XtraLease" style="width:96px;opacity:.85">
+      <img src="assets/logo.svg" alt="XtraLease" style="width:96px;opacity:.85">
       <h1>Видео осмотр трейлера<br><span>Trailer video inspection</span></h1>
     </header>
 
-    <section class="card glass">
-      <div class="settings">
-        <button id="settingsBtn" class="btn ghost" type="button">Настройки / Settings</button>
-        <dialog id="settingsDlg">
-          <form method="dialog" class="settings-form">
-            <h3>Настройки / Settings</h3>
-            <label>Google OAuth Client ID
-              <input id="gClientId" type="text" placeholder="xxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com" required>
-            </label>
-            <label>Telegram BOT Token
-              <input id="tgToken" type="password" placeholder="123456:ABC-DEF...">
-            </label>
-            <label>Telegram Chat ID
-              <input id="tgChatId" type="text" placeholder="5720447582">
-            </label>
-            <div class="row">
-              <button id="saveSettings" class="btn primary" value="default">Сохранить / Save</button>
-              <button id="closeSettings" class="btn" value="cancel">Закрыть / Close</button>
-            </div>
-            <small>Можно также передать ?t=&c= в URL.</small>
-          </form>
-        </dialog>
-      </div>
-
+    <section class="card">
       <form id="form" class="form" novalidate>
         <label class="field">
           <span>Трак № / Truck #</span>
@@ -87,11 +60,6 @@
           <img id="thumbImg" alt="preview" style="display:block;width:100%">
         </div>
 
-        <div class="auth" style="display:flex;align-items:center;gap:8px">
-          <button id="gSignIn" class="btn" type="button" style="width:auto;padding:10px 14px;background:rgba(255,255,255,.08);color:#fff">Войти в Google / Sign in</button>
-          <span id="authState" class="muted" style="opacity:.8">Не авторизовано / Not signed in</span>
-        </div>
-
         <div id="status" class="status">Готово к отправке / Ready to submit</div>
 
         <div class="sticky">
@@ -99,10 +67,6 @@
         </div>
       </form>
     </section>
-
-    <footer class="foot" style="opacity:.65;margin:14px 0">
-      <small>GitHub Pages only. Видео грузится в ваш Google Drive через OAuth. После загрузки ссылка уходит в Telegram.</small>
-    </footer>
   </main>
 
   <script src="public/app.js" defer></script>
