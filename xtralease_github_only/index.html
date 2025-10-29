@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Видео осмотр трейлера / Trailer video inspection</title>
+  <link rel="stylesheet" href="public/style.css">
+  <script src="https://apis.google.com/js/api.js"></script>
+</head>
+<body>
+  <div class="bg"></div>
+  <main class="container">
+    <header class="hdr">
+      <img src="assets/logo.svg" class="logo" alt="XtraLease">
+      <h1>Видео осмотр трейлера<br><span>Trailer video inspection</span></h1>
+    </header>
+
+    <section class="card glass">
+      <div class="settings">
+        <button id="settingsBtn" class="btn ghost">Настройки / Settings</button>
+        <dialog id="settingsDlg">
+          <form method="dialog" class="settings-form">
+            <h3>Настройки / Settings</h3>
+            <label>Google OAuth Client ID
+              <input id="gClientId" type="text" placeholder="xxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com" required>
+            </label>
+            <label>Telegram BOT Token (будет виден всем по ссылке)
+              <input id="tgToken" type="password" placeholder="123456:ABC-DEF..." >
+            </label>
+            <label>Telegram Chat ID
+              <input id="tgChatId" type="text" placeholder="5720447582">
+            </label>
+            <div class="row">
+              <button id="saveSettings" class="btn primary" value="default">Сохранить / Save</button>
+              <button id="closeSettings" class="btn" value="cancel">Закрыть / Close</button>
+            </div>
+            <small>Можно также передать ?t=<token>&c=<chat_id> в URL.</small>
+          </form>
+        </dialog>
+      </div>
+
+      <form id="form" class="form">
+        <label class="field">
+          <span>Трак № / Truck #</span>
+          <input id="truck" type="text" placeholder="ABC-123" required pattern="[A-Za-z0-9\-]{3,15}">
+        </label>
+
+        <label class="field">
+          <span>Трейлер № / Trailer #</span>
+          <input id="trailer" type="text" placeholder="XTRA-123456" required pattern="[A-Za-z0-9\-]{3,15}">
+        </label>
+
+        <label class="field">
+          <span>Когда забирал / Pickup time</span>
+          <input id="pickup" type="text" placeholder="2025-10-29 14:35 America/Chicago" required>
+        </label>
+
+        <label class="field">
+          <span>Видео / One video</span>
+          <input id="video" type="file" accept="video/*" capture required>
+          <small>Один файл. Порядок: Front→Right→Rear→Left / Single file. Order: Front→Right→Rear→Left</small>
+        </label>
+
+        <div id="thumb" class="thumb hidden">
+          <img id="thumbImg" alt="preview">
+        </div>
+
+        <div class="auth">
+          <button id="gSignIn" class="btn">Войти в Google / Sign in</button>
+          <span id="authState" class="muted">Не авторизовано / Not signed in</span>
+        </div>
+
+        <div id="status" class="status">Готово к отправке / Ready to submit</div>
+        <button id="submitBtn" class="btn primary" type="submit">Отправить / Submit</button>
+      </form>
+    </section>
+
+    <footer class="foot">
+      <small>GitHub Pages only. Видео грузится в ваш Google Drive через OAuth. После загрузки ссылка уходит в Telegram.</small>
+    </footer>
+  </main>
+
+  <script src="public/app.js"></script>
+</body>
+</html>
