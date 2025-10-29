@@ -1,6 +1,7 @@
 :root{
   --bg1:#0B0B0C; --bg2:#121316;
   --accent:#FF2D20; --accent2:#D21C0F;
+  --green1:#10B981; --green2:#059669;
   --text:#FFFFFF; --text2:rgba(255,255,255,0.78);
 }
 *{box-sizing:border-box}
@@ -40,6 +41,10 @@ input[type="text"]:focus, input[type="file"]:focus{
 }
 .btn.primary:hover{transform: translateY(-1px); box-shadow: 0 12px 40px rgba(255,45,32,0.38)}
 .btn.primary:active{transform: scale(.98)}
+.btn.success{
+  background: linear-gradient(180deg, var(--green1), var(--green2));
+  color:white; box-shadow: 0 8px 30px rgba(16,185,129,0.35);
+}
 .status{margin:8px 0 16px; color:rgba(255,255,255,.78)}
 .thumb{margin:8px 0 8px; border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.06)}
 .thumb img{width:100%; display:block}
