@@ -7,21 +7,20 @@
   <link rel="preload" href="public/style.css" as="style">
   <link rel="stylesheet" href="public/style.css">
   <style>
-    /* Критические стили для гарантированного вида */
     body{margin:0;background:#0B0B0C;color:#fff;font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial}
     .container{max-width:560px;margin:0 auto;padding:16px}
     .hdr h1{margin:12px 0 20px;font-size:24px;line-height:1.25}
-    .hdr h1 span{opacity:.75;font-weight:500;font-size:16px}
     .card{padding:16px;border-radius:20px;background:rgba(255,255,255,.06);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.18)}
     .form{display:flex;flex-direction:column;gap:14px}
     .field{display:flex;flex-direction:column;gap:6px}
-    .field span{font-size:14px;opacity:.8}
     input[type="text"],input[type="file"]{width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff}
     .btn{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:16px;border-radius:16px;border:0;font-weight:600;cursor:pointer}
     .btn.primary{background:linear-gradient(180deg,#FF2D20,#D21C0F);color:#fff}
-    .status{margin:6px 0 10px;opacity:.8}
+    .lang{display:flex;gap:8px;justify-content:flex-end;margin-bottom:8px}
+    .lang button{padding:8px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;cursor:pointer}
     .thumb{border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06)}
     .thumb.hidden{display:none}
+    .status{margin:6px 0 10px;opacity:.85}
     @media (max-width:480px){.container{padding:12px}.hdr h1{font-size:22px}.sticky{position:sticky;bottom:12px}}
   </style>
   <script src="https://apis.google.com/js/api.js" defer></script>
@@ -30,30 +29,38 @@
   <main class="container">
     <header class="hdr">
       <img src="assets/logo.svg" alt="XtraLease" style="width:96px;opacity:.85">
-      <h1>Видео осмотр трейлера<br><span>Trailer video inspection</span></h1>
+      <h1 id="title">Видео осмотр трейлера<br><span id="subtitle">Trailer video inspection</span></h1>
     </header>
 
     <section class="card">
+      <div class="lang">
+        <button type="button" id="langRU">RU</button>
+        <button type="button" id="langEN">EN</button>
+      </div>
+
       <form id="form" class="form" novalidate>
         <label class="field">
-          <span>Трак № / Truck #</span>
+          <span id="labelTruck">Трак № / Truck #</span>
           <input id="truck" type="text" placeholder="ABC-123" required pattern="[A-Za-z0-9\-]{3,15}">
         </label>
 
         <label class="field">
-          <span>Трейлер № / Trailer #</span>
+          <span id="labelTrailer">Трейлер № / Trailer #</span>
           <input id="trailer" type="text" placeholder="XTRA-123456" required pattern="[A-Za-z0-9\-]{3,15}">
         </label>
 
         <label class="field">
-          <span>Когда забирал / Pickup time</span>
+          <span id="labelPickup">Когда забирал / Pickup time</span>
           <input id="pickup" type="text" placeholder="2025-10-29 14:35 America/Chicago" required>
         </label>
 
         <label class="field">
-          <span>Видео / One video</span>
+          <span id="labelVideo">Видео / One video</span>
           <input id="video" type="file" accept="video/*" capture required>
-          <small>Один файл. Порядок: Front→Right→Rear→Left / Single file. Order: Front→Right→Rear→Left</small>
+          <small id="hint">
+            все стороны трейлера внутри и снаружи • каждое колесо • потолок изнутри • углы и двери<br>
+            all trailer sides inside and outside • every wheel • interior roof • corners and doors
+          </small>
         </label>
 
         <div id="thumb" class="thumb hidden">
