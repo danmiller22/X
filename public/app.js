@@ -1,7 +1,3 @@
-// public/app.js
-// GitHub Pages only. Client-side Google OAuth + Drive upload + Telegram send.
-// WARNING: Telegram bot token in URL is visible to anyone with the link.
-
 const $ = (id) => document.getElementById(id);
 const form = $("form");
 const truckEl = $("truck");
@@ -223,9 +219,9 @@ form.addEventListener("submit", async (e)=>{
       `VIDEO: ${link}`,
       `ORDER: Front → Right → Rear → Left`,
       `SOURCE: XtraLease form`
-    ].join("\\n");
-    const en = ru; // same fields, English labels identical per requirement
-    await tgSendText(ru + "\\n\\n" + en);
+    ].join("\n");
+    const en = ru; // те же поля на EN
+    await tgSendText(ru + "\n\n" + en);
 
     setStatus("Отправлено / Sent");
   }catch(err){
