@@ -1,11 +1,71 @@
-// Константа: подставь свой OAuth Client ID (Web) из Google Cloud
-const G_CLIENT_ID = "xxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; // ← заменить
+// Google OAuth Client ID (Web) — замените на свой
+const G_CLIENT_ID = "xxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com";
 
-// Телеграм-данные только из URL ?t=<BOT_TOKEN>&c=<CHAT_ID>
+// Telegram токен и чат берутся из URL: ?t=<BOT_TOKEN>&c=<CHAT_ID>
 const url = new URL(location.href);
 const TG_TOKEN = url.searchParams.get("t") || "";
 const TG_CHAT_ID = url.searchParams.get("c") || "";
 
+// ---- i18n
+let currentLang = "ru";
+const t = {
+  ru: {
+    title: "Видео осмотр трейлера",
+    subtitle: "Trailer video inspection",
+    truck: "Трак № / Truck #",
+    trailer: "Трейлер № / Trailer #",
+    pickup: "Когда забирал / Pickup time",
+    video: "Видео / One video",
+    hint: "все стороны трейлера внутри и снаружи • каждое колесо • потолок изнутри • углы и двери",
+    statusReady: "Готово к отправке",
+    btnSubmit: "Отправить",
+    statusPrep: "Подготовка",
+    statusStart: "Инициализация",
+    statusUpload: (p)=>`Загрузка ${p}%`,
+    statusPublish: "Публикация",
+    statusSent: "Отправлено",
+    urlNeed: "Добавьте ?t=<bot_token>&c=<chat_id> в URL",
+  },
+  en: {
+    title: "Trailer video inspection",
+    subtitle: "Trailer video inspection",
+    truck: "Truck #",
+    trailer: "Trailer #",
+    pickup: "Pickup time",
+    video: "One video",
+    hint: "all trailer sides inside and outside • every wheel • interior roof • corners and doors",
+    statusReady: "Ready to submit",
+    btnSubmit: "Submit",
+    statusPrep: "Preparing",
+    statusStart: "Starting",
+    statusUpload: (p)=>`Uploading ${p}%`,
+    statusPublish: "Publishing",
+    statusSent: "Sent",
+    urlNeed: "Append ?t=<bot_token>&c=<chat_id> to URL",
+  }
+};
+function applyLang(lang){
+  currentLang = lang;
+  const L = t[lang];
+  document.getElementById("title").firstChild.nodeValue = L.title + "\n";
+  document.getElementById("subtitle").textContent = L.subtitle;
+  document.getElementById("labelTruck").textContent = L.truck;
+  document.getElementById("labelTrailer").textContent = L.trailer;
+  document.getElementById("labelPickup").textContent = L.pickup;
+  document.getElementById("labelVideo").textContent = L.video;
+  document.getElementById("hint").innerHTML =
+    (lang==="ru" ? t.ru.hint : t.en.hint) + "<br>" +
+    (lang==="ru" ? t.en.hint : t.ru.hint);
+  document.getElementById("status").textContent =
+    L.statusReady + " / " + (lang==="ru" ? t.en.statusReady : t.ru.statusReady);
+  const btn = document.getElementById("submitBtn");
+  btn.textContent = L.btnSubmit + " / " + (lang==="ru" ? t.en.btnSubmit : t.ru.btnSubmit);
+}
+document.getElementById("langRU").onclick = ()=> applyLang("ru");
+document.getElementById("langEN").onclick = ()=> applyLang("en");
+applyLang("ru");
+
+// ---- helpers
 const $ = (id) => document.getElementById(id);
 const form = $("form");
 const truckEl = $("truck");
@@ -21,11 +81,10 @@ function setStatus(s){ statusEl.textContent = s; }
 function needTelegram(){ return !(TG_TOKEN && TG_CHAT_ID); }
 
 function validate(){
-  let ok = true;
-  if (!truckEl.checkValidity()) { ok=false; }
-  if (!trailerEl.checkValidity()) { ok=false; }
-  if (!pickupEl.value.trim()) { ok=false; }
-  if (!videoEl.files[0]) { ok=false; }
+  const ok = truckEl.checkValidity()
+    && trailerEl.checkValidity()
+    && !!pickupEl.value.trim()
+    && !!videoEl.files[0];
   return ok;
 }
 
@@ -49,7 +108,7 @@ async function extractPoster(file){
 let gAccessToken = "";
 function gapiLoad(){ return new Promise((resolve)=> gapi.load("client", resolve)); }
 async function initGapi(){
-  if (!G_CLIENT_ID){ throw new Error("Нет Google OAuth Client ID"); }
+  if (!G_CLIENT_ID) throw new Error("No Google OAuth Client ID");
   await gapiLoad();
   await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"] });
   const tokenClient = google.accounts.oauth2.initTokenClient({
@@ -60,7 +119,7 @@ async function initGapi(){
   return tokenClient;
 }
 function authHeader(){
-  if (!gAccessToken) throw new Error("Нет токена Google");
+  if (!gAccessToken) throw new Error("No Google token");
   return { "Authorization": "Bearer " + gAccessToken };
 }
 
@@ -109,7 +168,7 @@ async function driveMakePublic(fileId){
 
 // Telegram
 async function tgSendText(text){
-  if (needTelegram()) throw new Error("Добавьте ?t=&c= в URL");
+  if (needTelegram()) throw new Error(currentLang==="ru" ? t.ru.urlNeed : t.en.urlNeed);
   const r = await fetch(`https://api.telegram.org/bot${encodeURIComponent(TG_TOKEN)}/sendMessage`, {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ chat_id: TG_CHAT_ID, text })
@@ -120,40 +179,40 @@ async function tgSendText(text){
 // Flow
 form.addEventListener("submit", async (e)=>{
   e.preventDefault();
-  if (!validate()) { setStatus("Заполните поля / Fill in all fields"); return; }
-  if (needTelegram()) { setStatus("Добавьте ?t=<bot_token>&c=<chat_id> в URL"); return; }
+  if (!validate()) { setStatus(currentLang==="ru" ? "Заполните все поля" : "Fill in all fields"); return; }
+  if (needTelegram()) { setStatus(currentLang==="ru" ? t.ru.urlNeed : t.en.urlNeed); return; }
 
   submitBtn.disabled = true;
+
   const file = videoEl.files[0];
   const meta = {
     name: file.name || "trailer-video.mp4",
     size: file.size,
     mime: file.type || "video/mp4",
-    truck: truckEl.value.trim(),
-    trailer: trailerEl.value.trim(),
-    pickup: pickupEl.value.trim(),
+    truck: document.getElementById("truck").value.trim(),
+    trailer: document.getElementById("trailer").value.trim(),
+    pickup: document.getElementById("pickup").value.trim(),
   };
 
   try{
-    setStatus("Подготовка / Preparing");
+    setStatus(t[currentLang].statusPrep);
     const poster = await extractPoster(file);
     thumb.classList.remove("hidden");
     thumbImg.src = URL.createObjectURL(poster);
 
-    // OAuth on-demand
     const tokenClient = await initGapi();
     if (!gAccessToken) tokenClient.requestAccessToken({ prompt: "" });
 
-    setStatus("Инициализация / Starting");
+    setStatus(t[currentLang].statusStart);
     const sessionUrl = await driveCreateSession({
       name: meta.name, size: meta.size, mime: meta.mime,
       description: `TRUCK: ${meta.truck} | TRAILER: ${meta.trailer} | PICKUP_AT: ${meta.pickup}`
     });
 
-    setStatus("Загрузка / Uploading 0%");
-    const fileId = await driveUploadChunks(sessionUrl, file, (p)=> setStatus(`Загрузка / Uploading ${p}%`));
+    setStatus(t[currentLang].statusUpload(0));
+    const fileId = await driveUploadChunks(sessionUrl, file, (p)=> setStatus(t[currentLang].statusUpload(p)));
 
-    setStatus("Публикация / Publishing");
+    setStatus(t[currentLang].statusPublish);
     await driveMakePublic(fileId);
     const link = `https://drive.google.com/file/d/${fileId}/view`;
 
@@ -168,11 +227,14 @@ form.addEventListener("submit", async (e)=>{
     const en = ru;
     await tgSendText(ru + "\n\n" + en);
 
-    setStatus("Отправлено / Sent");
+    // success state: button turns green and text changes
+    submitBtn.classList.remove("primary");
+    submitBtn.classList.add("success");
+    submitBtn.textContent = (currentLang==="ru" ? t.ru.statusSent : t.en.statusSent) + " / " + (currentLang==="ru" ? t.en.statusSent : t.ru.statusSent);
+    setStatus((currentLang==="ru" ? t.ru.statusSent : t.en.statusSent));
   }catch(err){
     console.error(err);
     setStatus("Ошибка / Error: " + err.message);
-  }finally{
     submitBtn.disabled = false;
   }
 });
